@@ -263,6 +263,7 @@ def save_data(args, timesteps, actions, actions_eef, action_bases, action_veloci
         '/observations/effort': [],
         '/observations/eef': [],
         '/observations/robot_base': [],
+        '/observations/base_velocity': [],
         '/action': [],
         '/action_eef': [],
         '/action_base': [],
