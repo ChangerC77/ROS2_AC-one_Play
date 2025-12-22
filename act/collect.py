@@ -289,6 +289,7 @@ def save_data(args, timesteps, actions, actions_eef, action_bases, action_veloci
         data_dict['/observations/eef'].append(ts['eef'])
         data_dict['/observations/effort'].append(ts['effort'])
         data_dict['/observations/robot_base'].append(ts['robot_base'])
+        data_dict['/observations/base_velocity'].append(ts['base_velocity'])
         data_dict['/action'].append(action)
         data_dict['/action_eef'].append(action_eef)
         data_dict['/action_base'].append(action_base)
@@ -382,7 +383,7 @@ def parse_arguments(known=False):
     parser.add_argument('--datasets', type=str, default=Path.joinpath(ROOT, 'datasets'),
                         help='dataset dir')
     parser.add_argument('--episode_idx', type=int, default=0, help='episode index')
-    parser.add_argument('--max_timesteps', type=int, default=800, help='max timesteps')
+    parser.add_argument('--max_timesteps', type=int, default=8000, help='max timesteps')
     parser.add_argument('--frame_rate', type=int, default=60, help='frame rate')
 
     # 配置文件
