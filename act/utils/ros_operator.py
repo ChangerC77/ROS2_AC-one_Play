@@ -543,16 +543,16 @@ class RosOperator(Node):
 
             if self.args.record == 'Distance':
                 base_pose = self.base_pose_deque.pop()
-                obs_dict['robot_base'] = [base_pose[0], base_pose[1], base_pose[2], robot_base.height,
-                                          robot_base.head_pit, robot_base.head_yaw]
+                obs_dict['robot_base'] = np.array([base_pose[0], base_pose[1], base_pose[2], robot_base.height,
+                                                   robot_base.head_pit, robot_base.head_yaw])
 
                 obs_dict['base_velocity'] = np.zeros((4,))
             if self.args.record == 'Speed':
-                obs_dict['robot_base'] = [0, 0, 0,
-                                          robot_base.height, robot_base.head_pit, robot_base.head_yaw]
+                obs_dict['robot_base'] = np.array([0, 0, 0,
+                                                   robot_base.height, robot_base.head_pit, robot_base.head_yaw])
 
                 base_velocity = self.base_velocity_deque.pop()
-                obs_dict['base_velocity'] = [base_velocity[0], base_velocity[1], base_velocity[2], base_velocity[3]]
+                obs_dict['base_velocity'] = np.array([base_velocity[0], base_velocity[1], base_velocity[2], base_velocity[3]])
         else:
             obs_dict['robot_base'] = np.zeros((6,))
             obs_dict['base_velocity'] = np.zeros((4,))
