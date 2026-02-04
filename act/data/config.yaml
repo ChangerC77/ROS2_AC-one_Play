@@ -3,9 +3,9 @@ camera_config:
   img_left_topic: '/camera/camera_l/color/image_rect_raw/compressed'
   img_right_topic: '/camera/camera_r/color/image_rect_raw/compressed'
 
-  img_head_depth_topic: '/camera/camera_h/depth/image_rect_raw/compressed'
-  img_left_depth_topic: '/camera/camera_l/depth/image_rect_raw/compressed'
-  img_right_depth_topic: '/camera/camera_r/depth/image_rect_raw/compressed'
+  img_head_depth_topic: '/camera/camera_h/depth/image_rect_raw/compressedDepth'
+  img_left_depth_topic: '/camera/camera_l/depth/image_rect_raw/compressedDepth'
+  img_right_depth_topic: '/camera/camera_r/depth/image_rect_raw/compressedDepth'
 
 arm_config:
   controller_left_topic: '/arm_master_l_status'
