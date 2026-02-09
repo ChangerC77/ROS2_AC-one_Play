@@ -476,8 +476,8 @@ class RosOperator(Node):
 
                         return None
 
-                    img_depth_data[key] = self.bridge.imgmsg_to_cv2(deque_map[key].pop(),
-                                                                    'passthrough')
+                    img_depth_data[key] = self.bridge.compressed_imgmsg_to_cv2(deque_map[key].pop(),
+                                                                               'passthrough')
 
         # 获取机械臂状态
         for arm_name in ['left_arm', 'right_arm']:
