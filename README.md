@@ -344,16 +344,21 @@ waiting 0 to start recording
 Start recording program...
 ```
 <img src='img/4.png'>
+
 When start, the arm will reach this status
 
 <img src='img/5.png'>
 
-then, press button 2 in controller box
+then, press button `2` in controller box
+
 <img src='img/6.png'>
 
 the arm will achieve this status:
+
 <img src='img/7.png'>
-continue to press button 1 on controller box, then the voice from pc said go, it will start to collect data
+
+continue to press button `1` on controller box, then the voice from pc said go, it will start to collect data
+
 ```
 Episode 0
 Preparing to record episode 10
@@ -373,7 +378,7 @@ Frame data: 8
 Frame data: 9
 Frame data: 10
 ```
-press button 2 to stop collection and save dataset, save path inROS2_AC-one_Play/act/datasets/
+press button `2` to stop collection and save dataset, save path in `ROS2_AC-one_Play/act/datasets/`
 
 output
 ```
@@ -387,7 +392,8 @@ Save
 
 Saved in 1.3s: /home/arx/WBCD/ROS2_AC-one_Play/act/datasets/episode_0
 ```
-when occur `saved ...`, it means can continue to collect data
+when occur `saved ...` , continue to press `1` to collect data, and press `2` to stop collect data.
+
 <a id="5-data-validation"></a>
 ## 5. Data Validation
 <a id="5-1-data-visualization"></a>
@@ -430,6 +436,70 @@ Saved effort plot to: /home/arx/WBCD/ROS2_AC-one_Play/act/datasets/episode_0_act
 
 <a id="6-training"></a>
 ## 6. Training
+when dataset is large, RTX 4070 will occur error: 
+
+<details>
+<summary>error</summary>
+```
+我运行./02_train.sh，报错：Traceback (most recent call last):
+  File "/home/arx/WBCD/ROS2_AC-one_Play/act/train.py", line 534, in <module>
+    main()
+  File "/home/arx/WBCD/ROS2_AC-one_Play/act/train.py", line 530, in main
+    train(args)
+  File "/home/arx/WBCD/ROS2_AC-one_Play/act/train.py", line 203, in train
+    best_ckpt_info = train_process(train_dataloader, val_dataloader, config, stats)
+  File "/home/arx/WBCD/ROS2_AC-one_Play/act/train.py", line 367, in train_process
+    epoch_train_summary = train_epoch(train_dataloader, policy, optimizer, policy_config)
+  File "/home/arx/WBCD/ROS2_AC-one_Play/act/train.py", line 277, in train_epoch
+    forward_dict, result = forward_pass(policy_config, data, policy)
+  File "/home/arx/WBCD/ROS2_AC-one_Play/act/train.py", line 303, in forward_pass
+    return policy(image_data, image_depth_data, left_states_data, right_states_data,
+  File "/home/arx/WBCD/ROS2_AC-one_Play/act/utils/policy.py", line 42, in __call__
+    a_hat, (mu, logvar) = self.model(image, depth_image, left_states, right_states, robot_base=robot_base,
+  File "/home/arx/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/arx/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/arx/WBCD/ROS2_AC-one_Play/act/detr/models/detr_vae.py", line 262, in forward
+    hs = self.transformer(self.query_embed.weight,
+  File "/home/arx/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/arx/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/arx/WBCD/ROS2_AC-one_Play/act/detr/models/transformer.py", line 120, in forward
+    memory = self.encoder(src, pos=pos, src_key_padding_mask=is_pad)
+  File "/home/arx/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/arx/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/arx/WBCD/ROS2_AC-one_Play/act/detr/models/transformer.py", line 147, in forward
+    output = layer(output,
+  File "/home/arx/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/arx/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/arx/WBCD/ROS2_AC-one_Play/act/detr/models/transformer.py", line 258, in forward
+    return self.forward_post(src, pos, src_key_padding_mask, src_mask)
+  File "/home/arx/WBCD/ROS2_AC-one_Play/act/detr/models/transformer.py", line 229, in forward_post
+    src2 = self.self_attn(q, k, value=src, attn_mask=src_mask,
+  File "/home/arx/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/arx/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/arx/.local/lib/python3.10/site-packages/torch/nn/modules/activation.py", line 1275, in forward
+    attn_output, attn_output_weights = F.multi_head_attention_forward(
+  File "/home/arx/.local/lib/python3.10/site-packages/torch/nn/functional.py", line 5525, in multi_head_attention_forward
+    attn_output_weights = torch.bmm(q_scaled, k.transpose(-2, -1))
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 324.00 MiB. GPU 0 has a total capacity of 7.63 GiB of which 91.25 MiB is free. Including non-PyTorch memory, this process has 7.52 GiB memory in use. Of the allocated memory 7.29 GiB is allocated by PyTorch, and 74.34 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+```
+</details>
+
+in this case, should modify the `batch size` from `32` to `8` here:
+`/home/arx/WBCD/ROS2_AC-one_Play/act/train.py`
+```
+    parser.add_argument('--batch_size', type=int, default=8, help='batch size')
+```
+after this, then train it via command:
 ```
 cd ~/WBCD/ROS2_AC-one_Play/tools
 ./02_train.sh 

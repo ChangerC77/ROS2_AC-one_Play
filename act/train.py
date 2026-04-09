@@ -464,7 +464,7 @@ def parse_args(known=False):
 
     # 训练设置
     parser.add_argument('--num_episodes', type=int, default=50, help='episodes number')
-    parser.add_argument('--batch_size', type=int, default=32, help='batch size')
+    parser.add_argument('--batch_size', type=int, default=8, help='batch size')
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument('--epochs', type=int, default=3000, help='number of training epochs')
     parser.add_argument('--lr', type=float, default=4e-5, help='learning rate')
