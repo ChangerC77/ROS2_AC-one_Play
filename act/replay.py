@@ -13,161 +13,185 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
     os.chdir(str(ROOT))
 
-import yaml
-import h5py
 import argparse
-import signal
-
-import rclpy
-
 import threading
 
+import h5py
 import numpy as np
-
-np.set_printoptions(linewidth=200)
-
-from functools import partial
+import rclpy
+import yaml
 
 from utils.ros_operator import RosOperator, Rate
 from utils.setup_loader import setup_loader
+
+np.set_printoptions(linewidth=200)
+np.set_printoptions(suppress=True)
+
+GRIPPER_INDEX = [6, 13]
 
 
 def load_yaml(yaml_file):
     try:
         with open(yaml_file, 'r', encoding='utf-8') as file:
             return yaml.safe_load(file)
-    except FileNotFoundError:
-        print(f"Error: File not found - {yaml_file}")
-
-        return None
-    except yaml.YAMLError as e:
-        print(f"Error: Failed to parse YAML file - {e}")
-
-        return None
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"Config file not found: {yaml_file}") from exc
+    except yaml.YAMLError as exc:
+        raise RuntimeError(f"Failed to parse YAML file: {yaml_file}") from exc
 
 
-def load_hdf5(dataset_path):
-    dataset_path = Path.joinpath(ROOT, dataset_path)
+def resolve_path(path_like):
+    path = Path(path_like).expanduser()
+    if path.suffix != '.hdf5':
+        path = path.with_suffix('.hdf5')
 
-    if not os.path.isfile(dataset_path):
-        raise FileNotFoundError(f"Dataset does not exist at: {dataset_path}")
+    if not path.is_absolute():
+        path = ROOT / path
 
-    try:
-        with h5py.File(dataset_path, 'r') as root:
-            qposes = root.get('/observations/qpos')
-            eefs = root.get('/observations/eef')
-            actions = root.get('/action')
-            actions_eefs = root.get('/action_eef')
-            action_base = root.get('/action_base')
-            action_velocity = root.get('/action_velocity')
-
-            # 确保所有所需的数据集都存在
-            if any(item is None for item in [qposes, eefs, actions, actions_eefs, action_base, action_velocity]):
-                missing_datasets = [name for name, item in zip(
-                    ['/observations/qpos', '/observations/eef', '/action', '/action_eef',
-                     '/action_base', '/action_velocity'],
-                    [qposes, eefs, actions, actions_eefs, action_base, action_velocity]
-                ) if item is None]
-
-                raise ValueError(f"Missing datasets in HDF5 file: {', '.join(missing_datasets)}")
-
-            return qposes[()], eefs[()], actions[()], actions_eefs[()], action_base[()], action_velocity[()]
-    except Exception as e:
-        raise RuntimeError(f"Error occurred while loading the HDF5 file: {e}")
+    return path.resolve()
 
 
-def robot_action(ros_operator, args, action, action_base, actions_velocity):
-    gripper_idx = [6, 13]
+def load_action_sequence(dataset_path, source):
+    dataset_path = resolve_path(dataset_path)
+    if not dataset_path.is_file():
+        raise FileNotFoundError(f"Dataset does not exist: {dataset_path}")
 
-    left_action = action[:gripper_idx[0] + 1]  # 取8维度
-    right_action = action[gripper_idx[0] + 1:gripper_idx[1] + 1]  # action[7:14]
+    dataset_key = '/action' if source == 'action' else '/observations/qpos'
 
-    print(f'{left_action=}')
+    with h5py.File(dataset_path, 'r') as root:
+        if dataset_key not in root:
+            raise KeyError(f"Dataset key missing in HDF5: {dataset_key}")
 
-    ros_operator.follow_arm_publish(left_action, right_action)  # follow_arm_publish_continuous_thread
+        actions = root[dataset_key][()]
 
-    if args.use_base:
-        ros_operator.set_robot_base_target(np.concatenate([action_base, actions_velocity]))
+    actions = np.asarray(actions, dtype=np.float64)
+    if actions.ndim != 2 or actions.shape[1] != 14:
+        raise ValueError(f"Expected replay data shape (N, 14), got {actions.shape}")
 
-
-def init_robot(ros_operator, use_base):
-    init0 = [0.0, 0.948, 0.858, -0.573, 0.0, 0.0, -2.8]
-    init1 = [0.0, 0.948, 0.858, -0.573, 0.0, 0.0, 0.0]
-
-    ros_operator.follow_arm_publish_continuous(init0, init0)
-    ros_operator.robot_base_shutdown()
-
-    if use_base:
-        input("Enter any key to continue :")
-
-        ros_operator.start_base_control_thread()
-        ros_operator.follow_arm_publish_continuous(init1, init1)
+    return dataset_path, actions
 
 
-def signal_handler(signal, frame, ros_operator):
-    print('Caught Ctrl+C / SIGINT signal')
+def apply_gripper_gate(action_value, gate):
+    min_gripper = 0
+    max_gripper = 5
 
-    # 底盘给零
-    ros_operator.robot_base_shutdown()
-    ros_operator.base_control_thread.join()
+    return min_gripper if action_value < gate else max_gripper
 
-    sys.exit(0)
+
+def split_action(action, gripper_gate):
+    action = np.asarray(action, dtype=np.float64).copy()
+    left_action = action[:GRIPPER_INDEX[0] + 1]
+    right_action = action[GRIPPER_INDEX[0] + 1:GRIPPER_INDEX[1] + 1]
+
+    if gripper_gate != -1:
+        left_action[GRIPPER_INDEX[0]] = apply_gripper_gate(left_action[GRIPPER_INDEX[0]], gripper_gate)
+        right_action[GRIPPER_INDEX[0]] = apply_gripper_gate(right_action[GRIPPER_INDEX[0]], gripper_gate)
+
+    return left_action, right_action
+
+
+def select_replay_window(actions, start_idx, end_idx):
+    total_steps = len(actions)
+    if start_idx < 0 or start_idx >= total_steps:
+        raise ValueError(f"start_idx must be in [0, {total_steps - 1}], got {start_idx}")
+
+    if end_idx == -1:
+        end_idx = total_steps
+    elif end_idx <= start_idx or end_idx > total_steps:
+        raise ValueError(f"end_idx must be in ({start_idx}, {total_steps}], got {end_idx}")
+
+    return actions[start_idx:end_idx], start_idx, end_idx
+
+
+def spin_loop(node):
+    while rclpy.ok():
+        rclpy.spin_once(node, timeout_sec=0.001)
+
+
+def move_to_first_action(ros_operator, first_action, gripper_gate):
+    left_action, right_action = split_action(first_action, gripper_gate)
+    print("Moving arms to the first replay frame...")
+    ros_operator.follow_arm_publish_continuous(left_action, right_action)
+
+
+def replay_actions(ros_operator, actions, frame_rate, gripper_gate, log_every, start_idx):
+    rate = Rate(frame_rate)
+    total_steps = len(actions)
+
+    for offset, action in enumerate(actions):
+        left_action, right_action = split_action(action, gripper_gate)
+        ros_operator.follow_arm_publish(left_action, right_action)
+
+        step_idx = start_idx + offset
+        if offset == 0 or offset == total_steps - 1 or ((offset + 1) % log_every == 0):
+            print(f"Replay step {offset + 1}/{total_steps} (dataset index {step_idx})")
+
+        rate.sleep()
+
+
+def parse_args(known=False):
+    parser = argparse.ArgumentParser(description='Replay robot arm actions from an HDF5 episode.')
+
+    parser.add_argument('--episode_path', type=str, required=True, help='path to episode .hdf5')
+    parser.add_argument('--data', type=str, default=Path.joinpath(ROOT, 'data/config.yaml'),
+                        help='ROS topic config yaml')
+    parser.add_argument('--source', type=str, choices=['action', 'qpos'], default='action',
+                        help='joint source in HDF5; action preserves gripper processing from collection')
+    parser.add_argument('--frame_rate', type=int, default=60, help='publish rate in Hz')
+    parser.add_argument('--start_idx', type=int, default=0, help='start frame index')
+    parser.add_argument('--end_idx', type=int, default=-1, help='end frame index, exclusive; -1 means full episode')
+    parser.add_argument('--log_every', type=int, default=60, help='log every N replay steps')
+    parser.add_argument('--gripper_gate', type=float, default=-1, help='optional gripper gate, same as inference.py')
+    parser.add_argument('--arm_feedback_timeout', type=float, default=10.0,
+                        help='seconds to wait for arm feedback before failing')
+
+    # Kept for RosOperator compatibility. This script only replays arm joints.
+    parser.add_argument('--use_base', action='store_true', help='reserved; base replay is not implemented here')
+    parser.add_argument('--record', choices=['Distance', 'Speed'], default='Distance',
+                        help='reserved for RosOperator compatibility')
+    parser.add_argument('--use_depth_image', action='store_true',
+                        help='reserved for RosOperator compatibility')
+    parser.add_argument('--is_compress', action='store_true',
+                        help='reserved for RosOperator compatibility')
+
+    return parser.parse_known_args()[0] if known else parser.parse_args()
 
 
 def main(args):
     setup_loader(ROOT)
 
-    rclpy.init()
+    if args.frame_rate <= 0:
+        raise ValueError(f"frame_rate must be > 0, got {args.frame_rate}")
+    if args.log_every <= 0:
+        raise ValueError(f"log_every must be > 0, got {args.log_every}")
 
     config = load_yaml(args.data)
-    ros_operator = RosOperator(args, config, in_collect=False)
+    dataset_path, actions = load_action_sequence(args.episode_path, args.source)
+    actions, start_idx, end_idx = select_replay_window(actions, args.start_idx, args.end_idx)
 
-    spin_thread = threading.Thread(target=rclpy.spin, args=(ros_operator,), daemon=True)
+    if args.use_base:
+        print("Warning: this replay script currently replays arm joints only. Base commands are ignored.")
+
+    print(f"Loaded replay data from: {dataset_path}")
+    print(f"Replay source: {args.source}")
+    print(f"Replay window: [{start_idx}, {end_idx}) -> {len(actions)} frames")
+
+    rclpy.init()
+    ros_operator = RosOperator(args, config, in_collect=False)
+    spin_thread = threading.Thread(target=spin_loop, args=(ros_operator,), daemon=True)
     spin_thread.start()
 
-    signal.signal(signal.SIGINT, partial(signal_handler, ros_operator=ros_operator))
-
-    qpoes, eefs, actions, actions_eefs, action_base, actions_velocity = load_hdf5(args.episode_path)
-
-    init_robot(ros_operator, args.use_base)
-
-    if args.states_replay:
-        replay_actions = actions
-    else:
-        replay_actions = qpoes
-
-    rate = Rate(args.frame_rate)
-    for idx in range(len(replay_actions)):
-        print(f'{replay_actions=}')
-        robot_action(ros_operator, args, replay_actions[idx], action_base[idx], idx)
-        rate.sleep()
-
-    ros_operator.base_enable = False
-
-    ros_operator.destroy_node()
-    rclpy.shutdown()
-    spin_thread.join()
-
-
-def parse_args(known=False):
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--episode_path', type=str, help='episode_path', required=True)
-    parser.add_argument('--frame_rate', type=int, default=60, help='frame rate')
-    parser.add_argument('--data', type=str, default=Path.joinpath(ROOT, 'data/config.yaml'), help='config file')
-
-    parser.add_argument('--use_base', action='store_true', help='use base')
-    parser.add_argument('--record', choices=['Distance', 'Speed'], default='Distance',
-                        help='record data')
-
-    parser.add_argument('--states_replay', action='store_true', help='use qpos replay')
-
-    parser.add_argument('--use_depth_image', action='store_true', help='use depth image')
-    parser.add_argument('--is_compress', action='store_true', help='compress image')
-
-    return parser.parse_known_args()[0] if known else parser.parse_args()
+    try:
+        move_to_first_action(ros_operator, actions[0], args.gripper_gate)
+        replay_actions(ros_operator, actions, args.frame_rate, args.gripper_gate, args.log_every, start_idx)
+    except KeyboardInterrupt:
+        print('Replay interrupted by user')
+    finally:
+        ros_operator.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+        spin_thread.join(timeout=1.0)
 
 
 if __name__ == '__main__':
-    args = parse_args()
-    main(args)
+    main(parse_args())
