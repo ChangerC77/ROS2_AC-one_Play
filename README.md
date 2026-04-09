@@ -1,12 +1,36 @@
 # AC one
+
+## Outline
+
+- [1. Hardware](#1-hardware)
+  - [1.1 Structure](#1-1-structure)
+  - [1.2 Connection](#1-2-connection)
+- [2. Download](#2-download)
+- [3. Build](#3-build)
+  - [3.1 01make](#3-1-01make)
+  - [3.2 Camera Configuration](#3-2-camera-configuration)
+- [4. Data Collection](#4-data-collection)
+- [5. Data Validation](#5-data-validation)
+  - [5.1 Data Visualization](#5-1-data-visualization)
+    - [5.1.1 episode_0_action_base.png](#5-1-1-episode_0_action_basepng)
+    - [5.1.2 episode_0_action_velocity.png](#5-1-2-episode_0_action_velocitypng)
+    - [5.1.3 episode_0_eef.png](#5-1-3-episode_0_eefpng)
+    - [5.1.4 episode_0_qpos.png](#5-1-4-episode_0_qpospng)
+    - [5.1.5 episode_0_qvel.png](#5-1-5-episode_0_qvelpng)
+    - [5.1.6 episode_0_video.mp4](#5-1-6-episode_0_videomp4)
+- [6. Training](#6-training)
+
+<a id="1-hardware"></a>
 ## 1. Hardware
 
 <img src='img/1.png'>
 
-## 1.1 Structure
+<a id="1-1-structure"></a>
+### 1.1 Structure
 使用蓝色况中的共8xM3螺丝连接机械臂模块与底座
 
-## 1.2 connection
+<a id="1-2-connection"></a>
+### 1.2 Connection
 共6根线：
 1. 右手腕realsense相机usb线
 2. 电源线，连接插排
@@ -15,6 +39,7 @@
 5. 左手腕realsense相机usb线
 6. top realsense相机usb线
 
+<a id="2-download"></a>
 ## 2. Download
 ```
 Download
@@ -47,7 +72,8 @@ remote: Total 943 (delta 12), reused 32 (delta 6), pack-reused 896 (from 1)
 ```
 </details>
 
-## 3. build
+<a id="3-build"></a>
+## 3. Build
 ```
 cd ~/WBCD/ROS2_AC-one_Play/realsense
 colcon build
@@ -63,6 +89,7 @@ Finished <<< realsense2_camera [15.8s]
 
 Summary: 3 packages finished [20.5s]```
 ```
+<a id="3-1-01make"></a>
 ### 3.1 01make
 ```
 cd ~/WBCD/ARX_X5/00-sh/ROS2/AC_one
@@ -103,7 +130,8 @@ Finished <<< arx_joy [3.94s]
 
 Summary: 1 package finished [4.02s]
 ```
-### 3.2 camera configuration
+<a id="3-2-camera-configuration"></a>
+### 3.2 Camera Configuration
 ```
 cd ~/WBCD/ROS2_AC-one_Play/realsense
 ./search.sh
@@ -130,6 +158,7 @@ declare -A CAMS=(
 )
 ```
 
+<a id="4-data-collection"></a>
 ## 4. Data Collection
 ```
 cd ~/WBCD/ROS2_AC-one_Play/tools
@@ -359,8 +388,10 @@ Save
 Saved in 1.3s: /home/arx/WBCD/ROS2_AC-one_Play/act/datasets/episode_0
 ```
 when occur `saved ...`, it means can continue to collect data
+<a id="5-data-validation"></a>
 ## 5. Data Validation
-### 5.1 Data Visulization
+<a id="5-1-data-visualization"></a>
+### 5.1 Data Visualization
 ```
 python ~/WBCD/ROS2_AC-one_Play/act/visualize.py
 ```
@@ -374,22 +405,30 @@ Saved eef plot to: /home/arx/WBCD/ROS2_AC-one_Play/act/datasets/episode_0_eef.pn
 Saved effort plot to: /home/arx/WBCD/ROS2_AC-one_Play/act/datasets/episode_0_action_base.png
 Saved effort plot to: /home/arx/WBCD/ROS2_AC-one_Play/act/datasets/episode_0_action_velocity.png
 ```
+<a id="5-1-1-episode_0_action_basepng"></a>
 #### 5.1.1 episode_0_action_base.png
 <img src='img/8.png'>
 
+<a id="5-1-2-episode_0_action_velocitypng"></a>
 #### 5.1.2 episode_0_action_velocity.png
 <img src='img/9.png'>
 
+<a id="5-1-3-episode_0_eefpng"></a>
 #### 5.1.3 episode_0_eef.png
 <img src='img/10.png'>
 
-#### 4.1.4 episode_0_qpos.png
+<a id="5-1-4-episode_0_qpospng"></a>
+#### 5.1.4 episode_0_qpos.png
 <img src='img/11.png'>
 
-#### 4.1.5 episode_0_qvel.png
+<a id="5-1-5-episode_0_qvelpng"></a>
+#### 5.1.5 episode_0_qvel.png
 <img src='img/12.png'>
 
-##### 4.1.6 episode_0_video.mp4
+<a id="5-1-6-episode_0_videomp4"></a>
+#### 5.1.6 episode_0_video.mp4
+
+<a id="6-training"></a>
 ## 6. Training
 ```
 cd ~/WBCD/ROS2_AC-one_Play/tools
