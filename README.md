@@ -436,12 +436,42 @@ Saved effort plot to: /home/arx/WBCD/ROS2_AC-one_Play/act/datasets/episode_0_act
 
 <a id="6-training"></a>
 ## 6. Training
-when dataset is large, RTX 4070 will occur error: 
+when dataset is large, RTX 4070 
+
+<details>
+<summary>nvidia-smi</summary>
+
+```
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 570.190                Driver Version: 570.190        CUDA Version: 12.8     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 4070 ...    Off |   00000000:01:00.0 Off |                  N/A |
+| N/A   68C    P0            103W /  115W |    7619MiB /   8188MiB |    100%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A            1270      G   /usr/lib/xorg/Xorg                        4MiB |
+|    0   N/A  N/A         2189492      C   python                                 7596MiB |
++-----------------------------------------------------------------------------------------+
+```
+</details>
+
+will occur error: 
 
 <details>
 <summary>error</summary>
+
 ```
-我运行./02_train.sh，报错：Traceback (most recent call last):
+Traceback (most recent call last):
   File "/home/arx/WBCD/ROS2_AC-one_Play/act/train.py", line 534, in <module>
     main()
   File "/home/arx/WBCD/ROS2_AC-one_Play/act/train.py", line 530, in main
